@@ -1,114 +1,132 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { useEffect, useState } from "react";
+import { defaultBoard } from "@/mock/mockData";
+import { PlusIcon } from "@heroicons/react/24/outline";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { addBoard, updateTask, onDragEnd } from "@/hooks/useBoardActions";
+import { BoardProps } from "@/types/types";
+import { BoardHeader } from "@/components/BoardHeader";
+import { TaskDescription } from "@/components/TaskDescription";
 
 export default function Home() {
-  return (
-    <div
-      className={`${geistSans.variable} ${geistMono.variable} grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]`}
-    >
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/pages/index.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [boards, setBoards] = useState<BoardProps[]>([]);
+  const [editTaskId, setEditTaskId] = useState("");
+  const [editBoardId, setEditBoardId] = useState("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  useEffect(() => {
+    const storedBoards = JSON.parse(localStorage.getItem("boards") || "null");
+
+    if (!storedBoards || storedBoards.length === 0) {
+      setBoards([...defaultBoard]);
+      localStorage.setItem("boards", JSON.stringify(defaultBoard));
+      setBoards(defaultBoard);
+    } else {
+      setBoards(storedBoards);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (boards.length > 0) {
+      localStorage.setItem("boards", JSON.stringify(boards));
+    }
+  }, [boards]);
+
+  return (
+    <div className="h-screen flex flex-col">
+      <DragDropContext
+        onDragEnd={(result) => onDragEnd(result, boards, setBoards)}
+      >
+        <Droppable droppableId="boards" direction="horizontal" type="board">
+          {(provided) => (
+            <div
+              className="flex flex-wrap gap-5 m-5 border-2 border-solid border-blue p-3 items-start
+                      "
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+            >
+              {boards.map((board, index) => (
+                <Draggable key={board.id} draggableId={board.id} index={index}>
+                  {(provided) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                      className="min-w-[171px] overflow-hidden flex flex-col border-2 border-black w-[32%] p-3 bg-white shadow-md"
+                    >
+                      <BoardHeader
+                        editBoardId={editBoardId}
+                        board={board}
+                        boards={boards}
+                        setEditBoardId={setEditBoardId}
+                        setBoards={setBoards}
+                      />
+                      <Droppable droppableId={board.id} type="task">
+                        {(provided) => (
+                          <div
+                            {...provided.droppableProps}
+                            ref={provided.innerRef}
+                          >
+                            {board.task.map((task, index) => (
+                              <Draggable
+                                key={task.id}
+                                draggableId={task.id}
+                                index={index}
+                              >
+                                {(provided) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className="flex flex-row justify-between p-2 border rounded bg-white mb-2 cursor-pointer"
+                                  >
+                                    {editTaskId === task.id ? (
+                                      <input
+                                        type="text"
+                                        value={task.description}
+                                        onChange={(e) =>
+                                          updateTask(
+                                            board.id,
+                                            task.id,
+                                            e.target.value,
+                                            boards,
+                                            setBoards
+                                          )
+                                        }
+                                        placeholder="입력..."
+                                        className="border p-1 flex-grow"
+                                        onBlur={() => setEditTaskId("")}
+                                        autoFocus
+                                      />
+                                    ) : (
+                                      <TaskDescription
+                                        boards={boards}
+                                        setBoards={setBoards}
+                                        task={task}
+                                        setEditTaskId={setEditTaskId}
+                                      />
+                                    )}
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              <button
+                className="bg-gray-200 w-[100px] h-[100px] flex items-center justify-center text-white"
+                onClick={() => addBoard(boards, setBoards)}
+              >
+                <PlusIcon className="text-black w-10 h-10" />
+              </button>
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
     </div>
   );
 }
